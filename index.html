@@ -1,0 +1,186 @@
+<html>
+
+<head>
+    <title>Vienna CDR Subset</title>
+        <meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
+        <script src="https://unpkg.com/deck.gl@^6.2.0/deckgl.min.js"></script>
+        <script src="https://api.tiles.mapbox.com/mapbox-gl-js/v0.51.0/mapbox-gl.js"></script>
+        <link rel="stylesheet" type="text/css" href="https://api.tiles.mapbox.com/mapbox-gl-js/v0.51.0/mapbox-gl.css">
+        <script src="https://d3js.org/d3.v5.min.js"></script>
+        <style type="text/css">
+        #map { position:absolute; top:0; bottom:0; width:100%; }
+        body {
+            font-family: Helvetica, Arial, sans-serif;
+            width: 100vw;
+            height: 100vh;
+            margin: 0;
+            padding: 0
+        }
+
+        #control-panel {
+            position: absolute;
+            background: #fff;
+            top: 0;
+            left: 0;
+            margin: 12px;
+            padding: 20px;
+            font-size: 12px;
+            line-height: 1.5;
+            z-index: 1;
+        }
+        #map-overlay{
+            position: absolute;
+            background: Green;
+            bottom: 0;
+            right: 0;
+            margin: 12px;
+            padding: 20px;
+            font-size: 12px;
+            line-height: 1.5;
+            z-index: 1;
+        }
+
+        label {
+            display: inline-block;
+            width: 140px;
+        }
+        </style>
+</head>
+
+<body>
+    <div id="control-panel">
+        <div>
+            <label>Radius</label>
+            <input id="radius" type="range" min="500" max="10000" step="500" value="1000"></input>
+            <span id="radius-value"></span>
+        </div>
+        <div>
+            <label>Coverage</label>
+            <input id="coverage" type="range" min="0" max="1" step="0.1" value="1"></input>
+            <span id="coverage-value"></span>
+        </div>
+        <div>
+            <label>Upper Percentile</label>
+            <input id="upperPercentile" type="range" min="90" max="100" step="1" value="100"></input>
+            <span id="upperPercentile-value"></span>
+        </div>
+        <div>
+           <label>Opacity</label>
+           <input id="opacity" type="range" min="0" max="1" step="0.01" value="1"></input>
+           <span id="opacity-value"></span>
+       </div>
+</div>
+
+
+</body>
+<script type="text/javascript">
+mapboxgl.accessToken = 'pk.eyJ1IjoicnNiYXVtYW5uIiwiYSI6ImNqbjdsemZybzFtc3MzcnFvNXFucXQweTEifQ.2N_6Nd1rZG-I2pyA9I1xfA';
+
+var { MapboxLayer, HexagonLayer } = deck;
+
+//Create the Mapbox map
+var map = new mapboxgl.Map({
+    container: document.body,
+    style: 'mapbox://styles/mapbox/dark-v9?optimize=true',
+    center: [14.7501, 47.7162],
+    zoom: 8,
+    pitch: 50.5
+});
+
+// Get Data for visual
+var DATA_URL = 'https://raw.githubusercontent.com/ahmedalobaidi1981/hexa/master/Allinvienna.csv';
+var DATA_URL2 = 'https://raw.githubusercontent.com/ahmedalobaidi1981/hexa/master/SALZBURG_14-18Comma.csv';
+
+//Create the deck.gl hexagon layer and style for the data
+var OPTIONS = ['radius', 'coverage', 'upperPercentile','opacity'];
+var OPTIONS2 = ['radius', 'coverage', 'upperPercentile','opacity'];
+var COLOR_RANGE = [
+   [2, 152, 189],
+   [76, 227, 206],
+   [246, 254, 181],
+   [224, 237, 177],
+   [214, 173, 84],
+  [289, 55, 78]
+];
+var LIGHT_SETTINGS = {
+    lightsPosition: [-0.144528, 49.739968, 8000, -3.807751, 54.104682, 8000],
+    ambientRatio: 0.5,
+    diffuseRatio: 0.4,
+    specularRatio: 0.2,
+    lightsStrength: [0.8, 0.0, 0.8, 0.0],
+    numberOfLights: 2
+};
+//var f = sliderValue;
+var hexagonLayer;
+
+//Add the deck.gl Custom Layer to the map after mapbox loads
+map.on('style.load', () => {
+
+    hexagonLayer = new MapboxLayer({
+        type: HexagonLayer,
+        id: "heatmap",
+        data: d3.csv(DATA_URL),
+        radius: 1000,
+        coverage: 0.9,
+        upperPercentile: 100,
+        opacity: 0.80,
+        colorRange: COLOR_RANGE,
+        elevationRange: [1, 70],
+        elevationScale: 200,
+        extruded: true,
+        getPosition: d => [Number(d.lng), Number(d.lat)],
+        lightSettings: LIGHT_SETTINGS
+    });
+
+    // Add the deck.gl hex layer below labels in the Mapbox map
+    map.addLayer(hexagonLayer, 'waterway-label');
+
+});
+var hexagonLayer2;
+
+//Add the deck.gl Custom Layer to the map after mapbox loads
+
+map.on('style.load', () => {
+    hexagonLayer2 = new MapboxLayer({
+        type: HexagonLayer,
+        id: "heatmap2",
+        data: d3.csv(DATA_URL2),
+        radius: 500,
+        coverage: 0.9,
+        upperPercentile: 100,
+        opacity: 0.80,
+        colorRange: COLOR_RANGE,
+        elevationRange: [1, 60],
+        elevationScale: 200,
+        extruded: true,
+        getPosition: d => [Number(d.lng), Number(d.lat)],
+        lightSettings: LIGHT_SETTINGS
+    });
+
+    // Add the deck.gl hex layer below labels in the Mapbox map
+    map.addLayer(hexagonLayer2, 'waterway-label');
+});
+// Add sliders to change the layer's settings based on user input
+OPTIONS.forEach(key => {
+    document.getElementById(key).onchange = (evt) => {
+        var value = Number(evt.target.value);
+        document.getElementById(key + '-value').innerHTML = value;
+          hexagonLayer.setProps({
+                [key]: value });
+          hexagonLayer2.setProps({
+                [key]: value });
+        };
+});
+//OPTIONS2.forEach(key => {
+//    document.getElementById(key).onchange = (evt) => {
+//        var value = Number(evt.target.value);
+//        document.getElementById(key + '-value').innerHTML = value;
+//        if (hexagonLayer2) {
+//            hexagonLayer2.setProps({
+//                [key]: value });
+//        }
+//    };
+//});
+</script>
+
+</html>
